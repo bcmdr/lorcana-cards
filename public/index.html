@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lorcana Card Finder</title>
+  <style>
+    /* Basic Reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    /* Set default font-size for inputs and buttons to 16px to prevent zooming on mobile */
+    input, button, select, textarea {
+      font-size: 16px;
+    }
+    html, body {
+      height: 100%;
+    }
+    body {
+      background: #1f1f1f;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #ddd;
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+    }
+    /* Page Container */
+    .page-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Sticky Navbar */
+    .navbar {
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: center;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    /* Search Form in Navbar */
+    .search-form {
+      width: 100%;
+      max-width: 600px;
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .search-form input[type="text"] {
+      padding: 0.5rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      width: 100%;
+    }
+    .search-form button.search-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      background-color: rgba(56,161,105,0.8);
+      color: #fff;
+      cursor: pointer;
+    }
+    .search-form button.toggle-filters,
+    .search-form button.clear-filters {
+      padding: 0.5rem 1rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .search-form button.clear-filters {
+      display: none;
+    }
+    /* Filters Panel (normal flow so it scrolls out of view) */
+    .filters {
+      display: none; /* hidden by default */
+      position: static;
+      width: 100%;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      padding: 0.75rem 1rem;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      margin: 0;
+    }
+    .filter-group {
+      margin: 0;
+      padding: 0.25rem 0;
+    }
+    .filter-group h4 {
+      margin-bottom: 0.25rem;
+      font-size: 1rem;
+      color: #fff;
+    }
+    .filter-btn {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      margin: 0.25rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .filter-btn.active {
+      background-color: rgba(56,161,105,0.8);
+      border-color: rgba(56,161,105,0.8);
+    }
+    .clear-filters-panel {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.25rem;
+    }
+    .clear-filters-panel button {
+      padding: 0.5rem 1rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      display: none;
+    }
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      max-width: 1200px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
+    .results-container {
+      position: relative;
+      width: 100%;
+      min-height: 300px;
+      margin-top: 1rem;
+    }
+    /* Flexbox Layout for Search Results */
+    .search-results {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .card {
+      flex: 1 1 200px; /* Minimum card width 200px */
+      max-width: 300px;
+      background: rgba(0,0,0,0.8);
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.7);
+      overflow: hidden;
+      cursor: pointer;
+      margin: 0.25rem;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .card img {
+      width: 100%;
+      display: block;
+    }
+    .card-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 1rem 0.5rem 0.5rem 0.5rem;
+      box-sizing: border-box;
+      background: rgba(0,0,0,0.9);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      text-align: center;
+      overflow-y: auto;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.95);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .card-overlay.show {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+    }
+    .card-overlay h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+    .card-overlay p {
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+    /* Floating Overlays */
+    .loading-overlay,
+    .no-results-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 1rem;
+      z-index: 10;
+    }
+    .loading-overlay::after {
+      content: "";
+      display: inline-block;
+      margin-left: 0.5rem;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid rgba(56,161,105,0.8);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    /* Footer using Flexbox */
+    .footer {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      color: #ccc;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      padding: 1rem;
+      font-size: 0.9rem;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .footer p {
+      margin: 0;
+    }
+    .footer a {
+      color: #38a169;
+      text-decoration: none;
+    }
+    /* Media Queries */
+    @media (min-width: 600px) {
+      .search-form {
+        grid-template-columns: 1fr auto auto auto;
+      }
+    }
+    @media (max-width: 600px) {
+      .search-form {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 400px) {
+      .navbar {
+        flex-direction: column;
+      }
+      .search-form {
+        grid-template-columns: 1fr;
+      }
+      .navbar, .footer {
+        padding: 0.5rem 1rem;
+      }
+      .search-form input[type="text"],
+      .search-form button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <!-- Sticky Navbar -->
+    <nav class="navbar">
+      <form id="search-form" class="search-form">
+        <input type="text" id="query" placeholder="Search terms (e.g., 'draw item')" required />
+        <button type="submit" class="search-btn">Search</button>
+        <button type="button" id="toggle-filters" class="toggle-filters">Show Filters</button>
+        <button type="button" id="clear-filters" class="clear-filters">Clear Filters</button>
+      </form>
+    </nav>
+
+    <!-- Filters Panel (scrolls with page) -->
+    <div id="filters" class="filters">
+      <div class="filter-group">
+        <h4>Ink Colors</h4>
+        <div id="ink-buttons">
+          <button type="button" class="filter-btn ink-btn" data-value="Amber">Amber</button>
+          <button type="button" class="filter-btn ink-btn" data-value="Amethyst">Amethyst</button>
+          <button type="button" class="filter-btn ink-btn" data-value="Emerald">Emerald</button>
+          <button type="button" class="filter-btn ink-btn" data-value="Ruby">Ruby</button>
+          <button type="button" class="filter-btn ink-btn" data-value="Sapphire">Sapphire</button>
+          <button type="button" class="filter-btn ink-btn" data-value="Steel">Steel</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <h4>Card Types</h4>
+        <div id="type-buttons">
+          <button type="button" class="filter-btn type-btn" data-value="Character">Character</button>
+          <button type="button" class="filter-btn type-btn" data-value="Item">Item</button>
+          <button type="button" class="filter-btn type-btn" data-value="Action">Action</button>
+          <button type="button" class="filter-btn type-btn" data-value="Song">Song</button>
+          <button type="button" class="filter-btn type-btn" data-value="Location">Location</button>
+        </div>
+      </div>
+      <div class="clear-filters-panel">
+        <button type="button" id="clear-filters-panel" class="clear-filters">Clear Filters</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="results-container">
+        <div id="results" class="search-results"></div>
+        <div id="loading" class="loading-overlay" style="display:none;">Loading...</div>
+        <div id="no-results" class="no-results-overlay" style="display:none;">No matching cards found.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>
+      This website uses trademarks and/or copyrights associated with Disney Lorcana TCG, used under 
+      <a href="https://cdn.ravensburger.com/lorcana/community-code-en" target="_blank">Ravensburger’s Community Code Policy</a>.
+      This website is not published, endorsed, or specifically approved by Disney or Ravensburger.
+      For more information about Disney Lorcana TCG, visit 
+      <a href="https://www.disneylorcana.com/" target="_blank">www.disneylorcana.com</a>.
+    </p>
+    <p>
+      <a href="https://api.lorcast.com/" target="_blank">Lorcana API</a>
+    </p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('search-form');
+      const queryInput = document.getElementById('query');
+      const loadingOverlay = document.getElementById('loading');
+      const noResultsOverlay = document.getElementById('no-results');
+      const resultsContainer = document.getElementById('results');
+      const toggleFiltersBtn = document.getElementById('toggle-filters');
+      const filtersDiv = document.getElementById('filters');
+      const clearFiltersPanelBtn = document.getElementById('clear-filters-panel');
+
+      let currentSearchAbortController = null;
+      let debounceTimer = null;
+      const DEBOUNCE_DELAY = 500;
+
+      function updateClearFiltersVisibility() {
+        const activeFilters = document.querySelectorAll('.ink-btn.active, .type-btn.active');
+        clearFiltersPanelBtn.style.display = (filtersDiv.style.display === 'block' && activeFilters.length > 0)
+          ? "inline-block" : "none";
+      }
+
+      toggleFiltersBtn.addEventListener('click', () => {
+        if (filtersDiv.style.display === 'block') {
+          filtersDiv.style.display = 'none';
+          toggleFiltersBtn.textContent = "Show Filters";
+        } else {
+          filtersDiv.style.display = 'block';
+          toggleFiltersBtn.textContent = "Hide Filters";
+          // Scroll to the top so filters are visible
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        updateClearFiltersVisibility();
+      });
+
+      clearFiltersPanelBtn.addEventListener('click', () => {
+        document.querySelectorAll('.ink-btn.active, .type-btn.active').forEach(btn => btn.classList.remove('active'));
+        updateClearFiltersVisibility();
+        performSearch();
+      });
+
+      const toggleFilterButtons = (selector) => {
+        document.querySelectorAll(selector).forEach(btn => {
+          btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+            updateClearFiltersVisibility();
+            performSearch();
+          });
+        });
+      };
+      toggleFilterButtons('.ink-btn');
+      toggleFilterButtons('.type-btn');
+
+      function performSearch() {
+        const query = queryInput.value.trim();
+        if (query.length < 3) return;
+        loadingOverlay.style.display = 'block';
+        noResultsOverlay.style.display = 'none';
+        resultsContainer.innerHTML = '';
+        const terms = query.split(/\s+/);
+        const textQuery = terms
+          .map(term => `(name:${term} OR text:${term} OR type:${term} OR version:${term} OR classification:${term} OR role:${term})`)
+          .join(" AND ");
+        const activeInk = Array.from(document.querySelectorAll('.ink-btn.active'))
+          .map(btn => `ink:${btn.dataset.value}`);
+        const inkQuery = activeInk.length > 0 ? `(${activeInk.join(" OR ")})` : "";
+        const activeTypes = Array.from(document.querySelectorAll('.type-btn.active'))
+          .map(btn => `type:${btn.dataset.value}`);
+        const typeQuery = activeTypes.length > 0 ? `(${activeTypes.join(" OR ")})` : "";
+        let finalQuery = textQuery;
+        if (inkQuery) finalQuery += " AND " + inkQuery;
+        if (typeQuery) finalQuery += " AND " + typeQuery;
+        if (currentSearchAbortController) currentSearchAbortController.abort();
+        currentSearchAbortController = new AbortController();
+        const signal = currentSearchAbortController.signal;
+        const url = `https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent(finalQuery)}`;
+        console.log("Fetching:", url);
+        fetch(url, { signal })
+          .then(response => response.json())
+          .then(data => {
+            const cards = data.results || [];
+            if (cards.length === 0) {
+              noResultsOverlay.style.display = 'block';
+            }
+            document.querySelectorAll('.card-overlay.show').forEach(ov => ov.classList.remove('show'));
+            cards.forEach(card => {
+              const cardDiv = document.createElement('div');
+              cardDiv.className = 'card';
+              cardDiv.style.position = 'relative';
+              const img = document.createElement('img');
+              const imageUrl =
+                card.image_uris && card.image_uris.digital && card.image_uris.digital.large
+                  ? card.image_uris.digital.large
+                  : 'https://via.placeholder.com/150';
+              img.src = imageUrl;
+              img.alt = card.name;
+              cardDiv.appendChild(img);
+              const overlayDiv = document.createElement('div');
+              overlayDiv.className = 'card-overlay';
+              overlayDiv.innerHTML = `
+                <h3>${card.name || 'N/A'}</h3>
+                ${card.version ? `<p>${card.version}</p>` : ''}
+                ${card.type ? `<p style="font-weight:bold;">${card.type}</p>` : ''}
+                <p>${card.text || 'No text available.'}</p>
+              `;
+              cardDiv.appendChild(overlayDiv);
+              cardDiv.addEventListener('click', () => {
+                document.querySelectorAll('.card-overlay.show').forEach(ov => ov.classList.remove('show'));
+                overlayDiv.classList.add('show');
+              });
+              overlayDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                overlayDiv.classList.remove('show');
+              });
+              resultsContainer.appendChild(cardDiv);
+            });
+          })
+          .catch(error => {
+            if (error.name !== 'AbortError') console.error(error);
+          })
+          .finally(() => {
+            loadingOverlay.style.display = 'none';
+          });
+      }
+
+      queryInput.addEventListener('input', () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(performSearch, DEBOUNCE_DELAY);
+      });
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        performSearch();
+      });
+    });
+  </script>
+</body>
+</html>
