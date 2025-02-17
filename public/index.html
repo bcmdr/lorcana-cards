@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Prevent mobile zooming -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Lorcana Card Finder</title>
   <style>
     /* Basic Reset */
@@ -11,7 +12,7 @@
       margin: 0;
       padding: 0;
     }
-    /* Set default font-size for inputs and buttons to 16px to prevent zooming on mobile */
+    /* Prevent mobile zoom */
     input, button, select, textarea {
       font-size: 16px;
     }
@@ -83,7 +84,7 @@
     .search-form button.clear-filters {
       display: none;
     }
-    /* Filters Panel (normal flow so it scrolls out of view) */
+    /* Filters Panel (normal flow) */
     .filters {
       display: none; /* hidden by default */
       position: static;
@@ -145,7 +146,32 @@
       min-height: 300px;
       margin-top: 1rem;
     }
-    /* Flexbox Layout for Search Results */
+    /* Hero Section */
+    .hero {
+      display: block;
+      padding: 2rem;
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 8px;
+      margin: 1rem;
+    }
+    .hero h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .hero p {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      background-color: rgba(56,161,105,0.8);
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    /* Search Results Layout */
     .search-results {
       display: flex;
       flex-wrap: wrap;
@@ -154,7 +180,7 @@
       margin-top: 1rem;
     }
     .card {
-      flex: 1 1 200px; /* Minimum card width 200px */
+      flex: 1 1 200px;
       max-width: 300px;
       background: rgba(0,0,0,0.8);
       border-radius: 4px;
@@ -222,11 +248,15 @@
       text-align: center;
       font-size: 1rem;
       z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
     .loading-overlay::after {
       content: "";
-      display: inline-block;
-      margin-left: 0.5rem;
+      display: block;
+      margin-top: 0.5rem;
       width: 1rem;
       height: 1rem;
       border: 2px solid rgba(56,161,105,0.8);
@@ -303,7 +333,7 @@
       </form>
     </nav>
 
-    <!-- Filters Panel (scrolls with page) -->
+    <!-- Filters Panel (scrolls normally) -->
     <div id="filters" class="filters">
       <div class="filter-group">
         <h4>Ink Colors</h4>
@@ -334,6 +364,13 @@
     <!-- Main Content -->
     <div class="main-content">
       <div class="results-container">
+        <!-- Hero Section for Initial State / No Search Loaded -->
+        <div id="hero" class="hero">
+          <h1>Find Lorcana Cards</h1>
+          <p>Search card text for terms and synergies.</p>
+          <button id="return-home">Start Searching</button>
+        </div>
+        <!-- Search Results -->
         <div id="results" class="search-results"></div>
         <div id="loading" class="loading-overlay" style="display:none;">Loading...</div>
         <div id="no-results" class="no-results-overlay" style="display:none;">No matching cards found.</div>
@@ -345,7 +382,9 @@
   <footer class="footer">
     <p>
       This website uses trademarks and/or copyrights associated with Disney Lorcana TCG, used under 
-      <a href="https://cdn.ravensburger.com/lorcana/community-code-en" target="_blank">Ravensburger’s Community Code Policy</a>.
+      <a href="https://cdn.ravensburger.com/lorcana/community-code-en" target="_blank">
+        Ravensburger’s Community Code Policy
+      </a>.
       This website is not published, endorsed, or specifically approved by Disney or Ravensburger.
       For more information about Disney Lorcana TCG, visit 
       <a href="https://www.disneylorcana.com/" target="_blank">www.disneylorcana.com</a>.
@@ -362,6 +401,8 @@
       const loadingOverlay = document.getElementById('loading');
       const noResultsOverlay = document.getElementById('no-results');
       const resultsContainer = document.getElementById('results');
+      const heroSection = document.getElementById('hero');
+      const returnHomeBtn = document.getElementById('return-home');
       const toggleFiltersBtn = document.getElementById('toggle-filters');
       const filtersDiv = document.getElementById('filters');
       const clearFiltersPanelBtn = document.getElementById('clear-filters-panel');
@@ -369,6 +410,9 @@
       let currentSearchAbortController = null;
       let debounceTimer = null;
       const DEBOUNCE_DELAY = 500;
+
+      // Show hero by default
+      heroSection.style.display = 'block';
 
       function updateClearFiltersVisibility() {
         const activeFilters = document.querySelectorAll('.ink-btn.active, .type-btn.active');
@@ -383,7 +427,6 @@
         } else {
           filtersDiv.style.display = 'block';
           toggleFiltersBtn.textContent = "Hide Filters";
-          // Scroll to the top so filters are visible
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         updateClearFiltersVisibility();
@@ -407,10 +450,18 @@
       toggleFilterButtons('.ink-btn');
       toggleFilterButtons('.type-btn');
 
+      // "Start Searching" button: focus the search field and scroll to top
+      returnHomeBtn.addEventListener('click', () => {
+        queryInput.focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
       function performSearch() {
         const query = queryInput.value.trim();
+        // Hide hero on search
+        heroSection.style.display = 'none';
         if (query.length < 3) return;
-        loadingOverlay.style.display = 'block';
+        loadingOverlay.style.display = 'flex';
         noResultsOverlay.style.display = 'none';
         resultsContainer.innerHTML = '';
         const terms = query.split(/\s+/);
